@@ -1,17 +1,32 @@
 PROJNAME := PAZ_Audio
 CXXVER := 17
-MINMACOSVER := 10.12
+MINMACOSVER := 11.0
 
 LIBNAME := $(shell echo $(PROJNAME) | sed 's/_//g' | tr '[:upper:]' '[:lower:]')
 ifeq ($(OS), Windows_NT)
-    LIBPATH := /mingw64/lib
-    INCLPATH := /mingw64/include
     OSPRETTY := Windows
+    ifeq ($(MSYSTEM), UCRT64)
+        CC := gcc
+        CXX := g++
+        LIBPATH := /ucrt64/lib
+        INCLPATH := /ucrt64/include
+    else ifeq ($(MSYSTEM), CLANG64)
+        CC := clang
+        CXX := clang++
+        LIBPATH := /clang64/lib
+        INCLPATH := /clang64/include
+    else
+        $(error Unsupported Windows environment)
+    endif
 else
     ifeq ($(shell uname -s), Darwin)
         OSPRETTY := macOS
+        CC := clang
+        CXX := clang++
     else
         OSPRETTY := Linux
+        CC := gcc
+        CXX := g++
     endif
     LIBPATH := /usr/local/lib
     INCLPATH := /usr/local/include
@@ -28,12 +43,8 @@ else
     endif
 endif
 CXXFLAGS := -std=c++$(CXXVER) $(CFLAGS) -Wold-style-cast
-ifeq ($(OSPRETTY), macOS)
+ifeq ($(CC), clang)
     CXXFLAGS += -Wno-string-plus-int
-else
-    ifeq ($(OSPRETTY), Windows)
-        CXXFLAGS += -Wno-deprecated-copy
-    endif
 endif
 ARFLAGS := -rcs
 
@@ -44,13 +55,15 @@ ifeq ($(OSPRETTY), macOS)
 endif
 OBJCSRC := $(wildcard *.mm)
 ifeq ($(OSPRETTY), macOS)
-    ARMOBJ := $(patsubst %.c, %_arm64.o, $(patsubst %.cpp, %.c, $(CSRC))) $(OBJCSRC:%.mm=%_arm64.o)
-    INTOBJ := $(patsubst %.c, %_x86_64.o, $(patsubst %.cpp, %.c, $(CSRC))) $(OBJCSRC:%.mm=%_x86_64.o)
+    ARMOBJ := $(patsubst %.c, %_arm64.o, $(patsubst %.cpp, %.c, $(CSRC))) \
+        $(OBJCSRC:%.mm=%_arm64.o)
+    INTOBJ := $(patsubst %.c, %_x86_64.o, $(patsubst %.cpp, %.c, $(CSRC))) \
+        $(OBJCSRC:%.mm=%_x86_64.o)
 else
     OBJ := $(patsubst %.c, %.o, $(patsubst %.cpp, %.c, $(CSRC)))
 endif
 
-print-% : ; @echo $* = $($*)
+print-% : ; @echo "$* = $($*)"
 
 .PHONY: test
 default: test
@@ -73,15 +86,26 @@ lib$(LIBNAME).a: $(OBJ)
 endif
 
 install: $(PROJNAME) lib$(LIBNAME).a
-	cmp -s $(PROJNAME) $(INCLPATH)/$(PROJNAME) || cp $(PROJNAME) $(INCLPATH)/
-	cmp -s lib$(LIBNAME).a $(LIBPATH)/lib$(LIBNAME).a || cp lib$(LIBNAME).a $(LIBPATH)/
+	@[[ -d $(INCLPATH) ]] || \
+	    { echo "mkdir -p $(INCLPATH)"; mkdir -p $(INCLPATH); }
+	@cmp -s $(PROJNAME) $(INCLPATH)/$(PROJNAME) && \
+	    echo "Nothing to do for $(INCLPATH)/$(PROJNAME)" || \
+	    { echo "cp $(PROJNAME) $(INCLPATH)/"; \
+	    cp $(PROJNAME) $(INCLPATH)/; }
+	@[[ -d $(LIBPATH) ]] || \
+	    { echo "mkdir -p $(LIBPATH)"; mkdir -p $(LIBPATH); }
+	@cmp -s lib$(LIBNAME).a $(LIBPATH)/lib$(LIBNAME).a && \
+	    echo "Nothing to do for $(LIBPATH)/lib$(LIBNAME).a" || \
+	    { echo "cp lib$(LIBNAME).a $(LIBPATH)/"; \
+	    cp lib$(LIBNAME).a $(LIBPATH)/; }
 
 test: lib$(LIBNAME).a
 	$(MAKE) -C test
 	test/test
 
 analyze: $(OBJCSRC)
-	$(foreach n, $(OBJCSRC), clang++ --analyze $(n) $(CXXFLAGS) && $(RM) $(n:%.mm=%.plist);)
+	$(foreach n, $(OBJCSRC), clang++ --analyze $(n) $(CXXFLAGS) && $(RM) \
+	    $(n:%.mm=%.plist);)
 
 %_arm64.o: %.cpp
 	$(CXX) -arch arm64 -c -o $@ $< $(CXXFLAGS)
@@ -89,26 +113,17 @@ analyze: $(OBJCSRC)
 %_x86_64.o: %.cpp
 	$(CXX) -arch x86_64 -c -o $@ $< $(CXXFLAGS)
 
-%.o: %.cpp
-	$(CXX) -c -o $@ $< $(CXXFLAGS)
-
 %_arm64.o: %.c
 	$(CC) -arch arm64 -c -o $@ $< $(CFLAGS)
 
 %_x86_64.o: %.c
 	$(CC) -arch x86_64 -c -o $@ $< $(CFLAGS)
 
-%.o: %.c
-	$(CC) -c -o $@ $< $(CFLAGS)
-
 %_arm64.o: %.mm
 	$(CC) -arch arm64 -c -o $@ $< $(CXXFLAGS)
 
 %_x86_64.o: %.mm
 	$(CC) -arch x86_64 -c -o $@ $< $(CXXFLAGS)
-
-%.o: %.mm
-	$(CC) -c -o $@ $< $(CXXFLAGS)
 
 clean:
 	$(RM) *.o *.a
