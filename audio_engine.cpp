@@ -16,6 +16,8 @@
 #include <condition_variable>
 #include <cmath>
 #include <stdexcept>
+#include <algorithm>
+#include <string>
 
 static constexpr double SampleRate = 44'100.;
 #ifndef PAZ_MACOS
