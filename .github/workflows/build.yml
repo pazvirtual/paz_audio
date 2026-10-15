@@ -23,7 +23,7 @@ jobs:
       - name: Check Audio Device
         shell: powershell
         run: Get-CimInstance Win32_SoundDevice | fl *
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
@@ -31,7 +31,7 @@ jobs:
           install: make mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-portaudio
       - name: Build and Test
         run: make -j
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-ucrt64-build
           path: libpazaudio.a
@@ -57,7 +57,7 @@ jobs:
       - name: Check Audio Device
         shell: powershell
         run: Get-CimInstance Win32_SoundDevice | fl *
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: msys2/setup-msys2@v2
         with:
           msystem: CLANG64
@@ -65,24 +65,24 @@ jobs:
           install: make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-portaudio
       - name: Build and Test
         run: make -j
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-clang64-build
           path: libpazaudio.a
   #macos: # HANGS ON TEST/TEST
   #  runs-on: macos-latest
   #  steps:
-  #    - uses: actions/checkout@v4
+  #    - uses: actions/checkout@v7
   #    - name: Build and Test
   #      run: make -j
-  #    - uses: actions/upload-artifact@v4
+  #    - uses: actions/upload-artifact@v7
   #      with:
   #        name: macos-build
   #        path: libpazaudio.a
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Dependencies
         run: |
           sudo apt update
@@ -95,7 +95,7 @@ jobs:
         run: pactl list short
       - name: Build and Test
         run: make -j
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-build
           path: libpazaudio.a
