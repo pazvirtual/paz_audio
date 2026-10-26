@@ -67,6 +67,7 @@ int main()
     paz::AudioEngine::SetFreqScale(1.);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    paz::AudioEngine::SetVolume(0.); //TEMP - audio engine should wait for stream to go to zero before terminating
+    paz::AudioEngine::SetVolume(0.);
+    //TEMP - audio engine should wait for stream to go to 0 before terminating
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
